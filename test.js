@@ -17,20 +17,20 @@ document.getElementById("analyzeBtn").addEventListener("click", async () => {
   const imageFile = fileInput.files[0];
   const imageData = await imageFile.arrayBuffer();
 
-  const [geminiTags, clarifaiTags] = await Promise.all([
+  const [geminiTags, refinedTags] = await Promise.all([
     analyzeWithGemini(imageData),
-    analyzeWithClarifai(imageData),
+    analyzeWithGemini(imageData).then(analyzeWithOpenRouter), // feed tags to Polaris
   ]);
 
   displayResults("geminiResults", geminiTags);
-  displayResults("hfResults", clarifaiTags);
+  displayResults("hfResults", openRouterTags);
 
-  const overlap = geminiTags.filter((tag) => clarifaiTags.includes(tag));
+  const overlap = geminiTags.filter((tag) => openRouterTags.includes(tag));
   displayResults("overlapResults", overlap);
 });
 
 // =======================
-// GEMINI VISION API
+// GEMINI VISION API (unchanged)
 // =======================
 async function analyzeWithGemini(imageBuffer) {
   const base64Image = btoa(
@@ -72,38 +72,34 @@ async function analyzeWithGemini(imageBuffer) {
 }
 
 // =======================
-// CLARIFAI IMAGE RECOGNITION API
+// OPENROUTER IMAGE RECOGNITION (REPLACES CLARIFAI)
 // =======================
-async function analyzeWithClarifai(imageBuffer) {
-  const base64Image = btoa(
-    new Uint8Array(imageBuffer).reduce(
-      (data, byte) => data + String.fromCharCode(byte),
-      ""
-    )
+async function analyzeWithOpenRouter(tags) {
+  const prompt = `These are detected image tags: ${tags.join(", ")}
+Refine the list, remove irrelevant items, and return key descriptive tags only.`;
+
+  const response = await fetch(
+    "https://openrouter.ai/api/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: OPENROUTER_MODEL,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    }
   );
 
-  const body = {
-    inputs: [
-      {
-        data: { image: { base64: base64Image } },
-      },
-    ],
-  };
-
-  const response = await fetch(CLARIFAI_MODEL_URL, {
-    method: "POST",
-    headers: {
-      // Authorization: `Key ${CLARIFAI_API_KEY}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-
   const data = await response.json();
-  const concepts = data.outputs?.[0]?.data?.concepts || [];
+  const text = data.choices?.[0]?.message?.content || "";
 
-  return concepts.map((c) => c.name.toLowerCase());
+  return text
+    .split(/[,.\n]/)
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
 }
 
 // =======================
