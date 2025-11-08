@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Image Recognition Comparator</title>
+    <link rel="stylesheet" href="test.css" />
+</head>
+
+<body>
+    <div class="container">
+        <h1>🧠 AI Image Recognition Comparator</h1>
+        <input type="file" id="imageInput" accept="image/*" />
+        <button id="analyzeBtn">Compare APIs</button>
+
+        <div class="results">
+            <div>
+                <h2>Gemini Results</h2>
+                <ul id="geminiResults"></ul>
+            </div>
+            <div>
+                <h2>Clarif Results</h2>
+                <ul id="hfResults"></ul>
+            </div>
+            <div>
+                <h2>Overlapping Tags</h2>
+                <ul id="overlapResults"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="test.js"></script>
+</body>
+
+</html>
